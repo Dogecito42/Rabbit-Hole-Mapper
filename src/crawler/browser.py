@@ -16,6 +16,7 @@ Flujo de primera ejecucion por perfil:
     5. Las siguientes ejecuciones cargan ese estado y corren en modo headless
 """
 
+import os
 import random
 import time
 import logging
@@ -103,9 +104,14 @@ class BrowserSession:
             "--disable-dev-shm-usage",
         ]
 
+        chromium_path = os.environ.get(
+            "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH",
+            r"C:\Users\eldog\AppData\Local\ms-playwright\chromium-1217\chrome-win64\chrome.exe",
+        )
         self._browser = self._playwright.chromium.launch(
             headless=False if is_first_run else self.headless,
             args=launch_args,
+            executable_path=chromium_path,
         )
 
         context_kwargs = {

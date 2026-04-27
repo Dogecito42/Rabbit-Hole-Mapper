@@ -1,0 +1,22 @@
+# Entorno y secretos
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Datos generados en runtime (no subir sesiones reales ni cookies de Google)
+data/
+logs/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDEs
+.idea/
+.vscode/
+*.swp

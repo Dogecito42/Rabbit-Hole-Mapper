@@ -8,18 +8,22 @@ en un fichero JSON de sesion.
 Caracteristicas:
 - Checkpoint incremental cada CHECKPOINT_EVERY videos para no perder
   datos si YouTube bloquea la sesion a mitad.
-- Si next_video_id no se puede extraer del DOM, la sesion termina
-  anticipadamente y se persiste lo capturado hasta ese punto.
+- La navegacion al siguiente video se hace via ArrowDown (simula swipe real),
+  no dependiendo del preload del DOM. El next_video_id del extractor sigue
+  capturandose como arista del grafo de recomendaciones.
 - El fichero de salida incluye metadatos de la sesion (perfil, seed,
   timestamps) ademas de la lista de videos.
 """
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+_RE_SHORTS_ID = re.compile(r"/shorts/([A-Za-z0-9_-]+)")
 
 from src.config import (
     RAW_DIR,
@@ -132,26 +136,54 @@ class CrawlerSession:
                 self._persist(partial=True)
                 logger.info("Checkpoint guardado (%d videos)", len(self._captured))
 
-            if not metadata.next_video_id:
-                logger.warning("No se encontro el siguiente video en el DOM. Terminando sesion.")
-                break
-
             browser.human_delay()
             browser.simulate_mouse()
 
-            current_id = metadata.next_video_id
-            page.goto(f"https://www.youtube.com/shorts/{current_id}")
+            next_id = self._swipe_to_next(page, current_id)
+            if not next_id:
+                logger.warning("No se pudo navegar al siguiente video. Terminando sesion.")
+                break
+            current_id = next_id
+
+    def _swipe_to_next(self, page, current_id: str) -> str | None:
+        """
+        Simula el swipe hacia el siguiente Short pulsando ArrowDown.
+
+        Usar navegacion por teclado en lugar de goto() replica el comportamiento
+        real del usuario y no depende de que el DOM precargue el enlace siguiente.
+        El nuevo video_id se extrae de la URL resultante.
+        """
+        try:
+            page.keyboard.press("ArrowDown")
+            page.wait_for_url(
+                lambda url: bool(_RE_SHORTS_ID.search(url))
+                and _RE_SHORTS_ID.search(url).group(1) != current_id,
+                timeout=10_000,
+            )
+            match = _RE_SHORTS_ID.search(page.url)
+            return match.group(1) if match else None
+        except Exception as e:
+            logger.debug("Error al hacer swipe al siguiente video: %s", e)
+            return None
 
     def _wait_for_short(self, page):
         """
         Espera a que el Short este listo para extraer datos.
 
-        Estrategia: esperar a que la URL contenga /shorts/ y que
-        la red este idle (recursos principales cargados).
+        Esperar al titulo es mas fiable que un timeout fijo: cuando el titulo
+        esta en el DOM, el resto del overlay (hashtags, enlaces siguientes)
+        tambien ha renderizado.
         """
         page.wait_for_load_state("domcontentloaded", timeout=_PAGE_LOAD_TIMEOUT)
-        # Dar un margen extra para que los elementos del overlay rendericen
-        page.wait_for_timeout(1500)
+        try:
+            page.wait_for_selector(
+                "h2.ytShortsVideoTitleViewModelShortsVideoTitle, "
+                "yt-formatted-string.reel-player-overlay-style-title",
+                timeout=8_000,
+            )
+        except Exception:
+            # Si el titulo no aparece en 8 s, esperamos un margen fijo y continuamos
+            page.wait_for_timeout(3_000)
 
     # ------------------------------------------------------------------
     # Persistencia
@@ -168,12 +200,13 @@ class CrawlerSession:
         Returns:
             Path al fichero escrito.
         """
-        RAW_DIR.mkdir(parents=True, exist_ok=True)
+        profile_dir = RAW_DIR / self.perfil
+        profile_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = self._started_at.replace(":", "-").replace(".", "-")[:19]
         suffix = "_partial" if partial else ""
         filename = f"session_{self.perfil}_{timestamp}{suffix}.json"
-        output_path = RAW_DIR / filename
+        output_path = profile_dir / filename
 
         payload = {
             "perfil": self.perfil,

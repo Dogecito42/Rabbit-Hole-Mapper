@@ -47,10 +47,9 @@ class TranscriptFetcher:
             Texto completo de la transcripcion, o cadena vacia.
         """
         try:
-            fragments = YouTubeTranscriptApi.get_transcript(
-                video_id, languages=_PREFERRED_LANGUAGES
-            )
-            text = " ".join(f["text"] for f in fragments).strip()
+            api = YouTubeTranscriptApi()
+            fragments = api.fetch(video_id, languages=_PREFERRED_LANGUAGES)
+            text = " ".join(f.text for f in fragments).strip()
             logger.debug("Transcripcion obtenida para %s (%d chars)", video_id, len(text))
             return text
 

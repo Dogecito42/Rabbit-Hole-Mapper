@@ -129,8 +129,14 @@ class BrowserSession:
         if is_first_run:
             self.page.goto("https://accounts.google.com/signin")
             logger.info("Esperando a que el usuario complete el login...")
-            # Bloquea hasta que el usuario cierra la pagina o navega fuera de accounts.google.com
-            self.page.wait_for_url("https://www.youtube.com/**", timeout=300_000)
+            # Espera a salir de accounts.google.com; Google puede redirigir a myaccount u otras URLs
+            self.page.wait_for_url(
+                lambda url: "accounts.google.com" not in url,
+                timeout=300_000,
+            )
+            # Navega directamente a YouTube para asegurar que las cookies de YouTube quedan en el estado
+            self.page.goto("https://www.youtube.com")
+            self.page.wait_for_load_state("load", timeout=30_000)
             logger.info("Login detectado. Guardando sesion.")
 
         logger.info("Navegador iniciado para perfil '%s' (headless=%s)", self.perfil, self.headless)

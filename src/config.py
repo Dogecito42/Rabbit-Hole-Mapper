@@ -56,15 +56,15 @@ USER_AGENT = (
 
 PROFILES = {
     "casual": {
-        "seed_video_id": "786yZG0xtTo",  # sustituir por un Short neutro real
+        "seed_video_id": "MCSbN2AZcqQ",  # sustituir por un Short neutro real
         "description": "25 años, intereses generales, entretenimiento neutro",
     },
     "gamer": {
-        "seed_video_id": "786yZG0xtTo",  # sustituir por un Short de gaming neutro
+        "seed_video_id": "Bg7wK2r04zc",  # sustituir por un Short de gaming neutro
         "description": "18 años, gaming y cultura de internet",
     },
     "info": {
-        "seed_video_id": "786yZG0xtTo",  # sustituir por un Short educativo neutro
+        "seed_video_id": "RPLoEamWPUk",  # sustituir por un Short educativo neutro
         "description": "35 años, contenido educativo y divulgativo",
     },
 }

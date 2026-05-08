@@ -30,11 +30,18 @@ logger = logging.getLogger(__name__)
 # Selectores CSS — actualizar si YouTube cambia su estructura de DOM
 # ---------------------------------------------------------------------------
 
-# Titulo del video en la pagina de Shorts
-_SEL_TITLE = "yt-formatted-string.reel-player-overlay-style-title"
+# Titulo del video en la pagina de Shorts.
+# YouTube cambia su DOM con frecuencia; se prueban en orden hasta encontrar uno.
+_SEL_TITLE_CANDIDATES = [
+    "h2.ytShortsVideoTitleViewModelShortsVideoTitle span",
+    "yt-shorts-video-title-view-model h2 span",
+    "yt-formatted-string.reel-player-overlay-style-title",
+    "#video-title",
+]
 
-# Chips de hashtag/categoria visibles bajo el titulo
-_SEL_HASHTAGS = "yt-formatted-string#text a[href*='hashtag']"
+# Hashtags embebidos en la descripcion del Short como enlaces /hashtag/<nombre>/shorts.
+# Se limita al panel de descripcion para no capturar hashtags de Shorts precargados.
+_SEL_HASHTAGS = "ytd-video-description-header-renderer a[href*='/hashtag/']"
 
 # Todos los enlaces a Shorts en la pagina (incluye el actual y los siguientes)
 _SEL_SHORTS_LINKS = "a[href*='/shorts/']"
@@ -88,6 +95,7 @@ class VideoExtractor:
         (esperar a network idle o a que el selector del titulo sea visible).
         """
         video_id = self._extract_video_id()
+        self._open_description_panel()
         titulo = self._extract_titulo()
         hashtags = self._extract_hashtags()
         next_video_id = self._extract_next_video_id(current_id=video_id)
@@ -116,12 +124,33 @@ class VideoExtractor:
             raise ValueError(f"URL inesperada, no es un Short: {url}")
         return match.group(1)
 
-    def _extract_titulo(self) -> Optional[str]:
-        """Lee el titulo del video desde el overlay de Shorts."""
+    def _open_description_panel(self):
+        """
+        Abre el panel de descripcion haciendo click en el titulo del Short.
+
+        El panel contiene los hashtags y la descripcion completa. Sin abrirlo,
+        ytd-video-description-header-renderer no esta en el DOM.
+        Es best-effort: si falla, la extraccion de hashtags devolvera lista vacia.
+        """
         try:
-            element = self.page.query_selector(_SEL_TITLE)
-            if element:
-                return element.inner_text().strip() or None
+            title_el = self.page.query_selector(_SEL_TITLE_CANDIDATES[0])
+            if title_el:
+                title_el.click()
+                self.page.wait_for_selector(
+                    "ytd-video-description-header-renderer", timeout=3_000
+                )
+        except Exception:
+            pass
+
+    def _extract_titulo(self) -> Optional[str]:
+        """Lee el titulo del video probando varios selectores en orden."""
+        try:
+            for selector in _SEL_TITLE_CANDIDATES:
+                element = self.page.query_selector(selector)
+                if element:
+                    text = element.inner_text().strip()
+                    if text:
+                        return text
         except Exception as e:
             logger.debug("No se pudo extraer titulo: %s", e)
         return None
@@ -159,6 +188,8 @@ class VideoExtractor:
                 if candidate_id == current_id:
                     continue
                 if candidate_id in seen:
+                    continue
+                if len(candidate_id) < 5:  # descarta "/shorts" sin ID real
                     continue
                 seen.add(candidate_id)
                 return candidate_id   # primer candidato distinto al actual

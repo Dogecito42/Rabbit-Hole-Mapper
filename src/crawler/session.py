@@ -123,10 +123,16 @@ class CrawlerSession:
 
             decision = self._agent.evaluar(metadata)
             logger.info(
-                "Decision agente: accion=%s afinidad=%.2f extremismo=%.2f llm_ok=%s",
+                "Decision agente: accion=%s afinidad=%.2f extremismo=%.2f like=%s comentario=%s llm_ok=%s",
                 decision.accion, decision.afinidad_con_perfil,
-                decision.extremismo, decision.llm_ok,
+                decision.extremismo, decision.like,
+                bool(decision.comentario), decision.llm_ok,
             )
+
+            if decision.like:
+                self._dar_like(page)
+            if decision.comentario:
+                self._comentar(page, decision.comentario)
 
             entrada = metadata.to_dict()
             entrada["decision"] = decision.to_dict()
@@ -144,6 +150,44 @@ class CrawlerSession:
                 logger.warning("No se pudo navegar al siguiente video. Terminando sesion.")
                 break
             current_id = next_id
+
+    def _dar_like(self, page):
+        """
+        Hace click en el boton de like si no esta ya marcado.
+
+        Solo clica si aria-pressed="false" para no quitar un like previo.
+        Es best-effort: si el selector no existe o falla, se ignora.
+        """
+        try:
+            btn = page.query_selector("like-button-view-model button[aria-pressed='false']")
+            if btn:
+                btn.click()
+                logger.debug("Like dado")
+        except Exception as e:
+            logger.debug("No se pudo dar like: %s", e)
+
+    def _comentar(self, page, texto: str):
+        """Publica un comentario en el Short actual."""
+        try:
+            btn = page.query_selector("button[aria-label*='comentarios']")
+            if not btn:
+                return
+            btn.click()
+            page.wait_for_selector(
+                "#contenteditable-root[contenteditable='true']", timeout=5_000
+            )
+            input_el = page.query_selector("#contenteditable-root[contenteditable='true']")
+            if not input_el:
+                return
+            input_el.click()
+            page.wait_for_timeout(400)
+            input_el.type(texto)
+            submit = page.query_selector("ytd-button-renderer#submit-button button")
+            if submit:
+                submit.click()
+                logger.debug("Comentario publicado: %s", texto[:50])
+        except Exception as e:
+            logger.debug("No se pudo comentar: %s", e)
 
     def _swipe_to_next(self, page, current_id: str) -> str | None:
         """

@@ -19,15 +19,19 @@ logger = logging.getLogger(__name__)
 _ACCION_DEFECTO = "skip"
 
 
+_UMBRAL_LIKE = 0.6
+_UMBRAL_COMENTARIO = 0.8
+
+
 @dataclass
 class Decision:
     """
     Resultado de la evaluacion del agente sobre un video.
 
-    Todos los campos numericos son floats en [0.0, 1.0] tal como los devuelve el LLM.
-    accion es uno de: ver_completo, ver_parcial, skip, like.
-    llm_ok es False si el LLM fallo o devolvio una respuesta invalida;
-    en ese caso el resto de campos tienen valores de fallback conservadores.
+    like y comentario se derivan de afinidad_con_perfil con umbrales fijos
+    (>= 0.6 y >= 0.8 respectivamente) para que sean consistentes entre perfiles
+    independientemente de la variabilidad del LLM.
+    llm_ok es False si el LLM fallo; en ese caso los campos tienen valores de fallback.
     """
 
     perfil: str
@@ -37,6 +41,7 @@ class Decision:
     extremismo: float
     accion: str
     like: bool
+    comentario: Optional[str]
     razonamiento: str
     llm_ok: bool
 
@@ -49,6 +54,7 @@ class Decision:
             "extremismo": self.extremismo,
             "accion": self.accion,
             "like": self.like,
+            "comentario": self.comentario,
             "razonamiento": self.razonamiento,
             "llm_ok": self.llm_ok,
         }
@@ -94,14 +100,20 @@ class Agent:
                 datos["accion"], accion,
             )
 
+        afinidad = max(0.0, min(1.0, datos["afinidad_con_perfil"]))
+        # like y comentario se rigen por umbrales fijos, no por el criterio del LLM
+        like = afinidad >= _UMBRAL_LIKE
+        comentario = datos.get("comentario") if afinidad >= _UMBRAL_COMENTARIO else None
+
         return Decision(
             perfil=self.perfil,
             video_id=video.video_id,
             categoria_detectada=datos["categoria_detectada"],
-            afinidad_con_perfil=max(0.0, min(1.0, datos["afinidad_con_perfil"])),
+            afinidad_con_perfil=afinidad,
             extremismo=max(0.0, min(1.0, datos["extremismo"])),
             accion=accion,
-            like=datos["like"],
+            like=like,
+            comentario=comentario,
             razonamiento=datos["razonamiento"],
             llm_ok=True,
         )
@@ -131,6 +143,7 @@ class Agent:
             extremismo=0.0,
             accion=_ACCION_DEFECTO,
             like=False,
+            comentario=None,
             razonamiento="LLM no disponible, accion conservadora por defecto",
             llm_ok=False,
         )

@@ -96,9 +96,16 @@ class LLMClient:
         Convierte los tipos a los esperados para que la capa superior no haga casting.
 
         El LLM puede devolver afinidad como string "0.8" o como int 1.
+        comentario es opcional: null, "null" o ausente se normalizan a None.
         """
         datos["afinidad_con_perfil"] = float(datos["afinidad_con_perfil"])
         datos["extremismo"] = float(datos["extremismo"])
         datos["like"] = bool(datos["like"])
         datos["accion"] = str(datos["accion"]).strip()
+        comentario = datos.get("comentario")
+        datos["comentario"] = (
+            str(comentario).strip()
+            if comentario and str(comentario).strip().lower() not in ("null", "none", "")
+            else None
+        )
         return datos

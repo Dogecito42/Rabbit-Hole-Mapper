@@ -17,6 +17,7 @@ Caracteristicas:
 
 import json
 import logging
+import random
 import re
 from datetime import datetime
 from pathlib import Path
@@ -129,8 +130,14 @@ class CrawlerSession:
                 bool(decision.comentario), decision.llm_ok,
             )
 
+            self._simular_visionado(page, decision.accion)
+
             if decision.like:
                 self._dar_like(page)
+            elif decision.afinidad_con_perfil <= 0.2:
+                self._dar_dislike(page)
+            if decision.afinidad_con_perfil >= 0.9:
+                self._suscribir(page)
             if decision.comentario:
                 self._comentar(page, decision.comentario)
 
@@ -142,7 +149,6 @@ class CrawlerSession:
                 self._persist(partial=True)
                 logger.info("Checkpoint guardado (%d videos)", len(self._captured))
 
-            browser.human_delay()
             browser.simulate_mouse()
 
             next_id = self._swipe_to_next(page, current_id)
@@ -150,6 +156,61 @@ class CrawlerSession:
                 logger.warning("No se pudo navegar al siguiente video. Terminando sesion.")
                 break
             current_id = next_id
+
+    def _obtener_duracion(self, page) -> float | None:
+        """Lee la duracion del video en segundos desde el elemento <video> via JS."""
+        try:
+            dur = page.evaluate(
+                "() => { const v = document.querySelector('video'); "
+                "return v && isFinite(v.duration) ? v.duration : null; }"
+            )
+            return float(dur) if dur else None
+        except Exception:
+            return None
+
+    def _simular_visionado(self, page, accion: str):
+        """
+        Espera el tiempo de visionado correspondiente a la decision del agente.
+
+        Usar la duracion real del video hace que el comportamiento sea indistinguible
+        de un usuario humano para el algoritmo de recomendaciones de YouTube.
+        """
+        duracion = self._obtener_duracion(page)
+
+        if accion == "skip":
+            tiempo = random.uniform(2.0, 4.0)
+        elif accion == "ver_parcial":
+            tiempo = (duracion * random.uniform(0.3, 0.6)) if duracion else random.uniform(8.0, 20.0)
+        else:  # ver_completo
+            tiempo = (duracion * random.uniform(0.9, 1.0)) if duracion else random.uniform(25.0, 50.0)
+
+        logger.debug(
+            "Visionado: accion=%s duracion_real=%.1fs espera=%.1fs",
+            accion, duracion or 0, tiempo,
+        )
+        page.wait_for_timeout(int(tiempo * 1000))
+
+    def _dar_dislike(self, page):
+        """Marca No me gusta cuando la afinidad es muy baja (<= 0.2)."""
+        try:
+            btn = page.query_selector("button[aria-label*='No me gusta'][aria-pressed='false']")
+            if btn:
+                btn.click()
+                logger.debug("Dislike dado")
+        except Exception as e:
+            logger.debug("No se pudo dar dislike: %s", e)
+
+    def _suscribir(self, page):
+        """Se suscribe al canal si la afinidad es maxima (>= 0.9) y aun no esta suscrito."""
+        try:
+            btn = page.query_selector("yt-subscribe-button-view-model button")
+            if btn:
+                texto = btn.inner_text().strip().lower()
+                if "suscribirme" in texto:
+                    btn.click()
+                    logger.debug("Suscrito al canal")
+        except Exception as e:
+            logger.debug("No se pudo suscribir: %s", e)
 
     def _dar_like(self, page):
         """

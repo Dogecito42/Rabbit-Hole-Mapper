@@ -36,6 +36,12 @@ from src.crawler.extractor import VideoExtractor, VideoMetadata
 from src.crawler.transcript import TranscriptFetcher
 from src.agents.agent import Agent
 
+try:
+    from src.database.neo4j_client import Neo4jClient
+    _NEO4J_DISPONIBLE = True
+except ImportError:
+    _NEO4J_DISPONIBLE = False
+
 logger = logging.getLogger(__name__)
 
 # Tiempo maximo de espera para que el DOM de un Short cargue (ms).
@@ -52,7 +58,7 @@ class CrawlerSession:
         headless: False para el primer login o depuracion visual.
     """
 
-    def __init__(self, perfil: str, n_videos: int, headless: bool = True):
+    def __init__(self, perfil: str, n_videos: int, headless: bool = True, neo4j: bool = True):
         if perfil not in PROFILES:
             raise ValueError(f"Perfil '{perfil}' no reconocido. Opciones: {list(PROFILES)}")
 
@@ -65,6 +71,17 @@ class CrawlerSession:
         self._agent = Agent(perfil)
         self._captured: list[dict] = []
         self._started_at: str = ""
+        self._db: "Neo4jClient | None" = None
+
+        if neo4j and _NEO4J_DISPONIBLE:
+            try:
+                self._db = Neo4jClient()
+                self._db._crear_constraints()
+                self._db.merge_perfil(perfil)
+                logger.info("Neo4j conectado para perfil '%s'", perfil)
+            except Exception as e:
+                logger.warning("Neo4j no disponible, continuando sin grafo: %s", e)
+                self._db = None
 
     # ------------------------------------------------------------------
     # Punto de entrada publico
@@ -85,6 +102,9 @@ class CrawlerSession:
 
         with BrowserSession(perfil=self.perfil, headless=self.headless) as browser:
             self._navigate_and_collect(browser)
+
+        if self._db:
+            self._db.close()
 
         return self._persist()
 
@@ -144,6 +164,18 @@ class CrawlerSession:
             entrada = metadata.to_dict()
             entrada["decision"] = decision.to_dict()
             self._captured.append(entrada)
+
+            if self._db:
+                try:
+                    posicion = i
+                    sesion_id = self._started_at
+                    self._db.merge_video(metadata.video_id, metadata.titulo, metadata.hashtags)
+                    self._db.merge_interaccion(self.perfil, metadata.video_id, decision.to_dict(), sesion_id, posicion)
+                    if metadata.next_video_id:
+                        self._db.merge_video(metadata.next_video_id, None, [])
+                        self._db.merge_recomendacion(metadata.video_id, metadata.next_video_id, self.perfil, sesion_id, posicion)
+                except Exception as e:
+                    logger.warning("Error escribiendo en Neo4j: %s", e)
 
             if (i + 1) % CHECKPOINT_EVERY == 0:
                 self._persist(partial=True)

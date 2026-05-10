@@ -42,6 +42,13 @@ try:
 except ImportError:
     _NEO4J_DISPONIBLE = False
 
+try:
+    from src.rl.qtable import QTable, ACCIONES
+    from src.rl.reward import calcular_recompensa
+    _RL_DISPONIBLE = True
+except ImportError:
+    _RL_DISPONIBLE = False
+
 logger = logging.getLogger(__name__)
 
 # Tiempo maximo de espera para que el DOM de un Short cargue (ms).
@@ -58,7 +65,7 @@ class CrawlerSession:
         headless: False para el primer login o depuracion visual.
     """
 
-    def __init__(self, perfil: str, n_videos: int, headless: bool = True, neo4j: bool = True):
+    def __init__(self, perfil: str, n_videos: int, headless: bool = True, neo4j: bool = True, rl: bool = True):
         if perfil not in PROFILES:
             raise ValueError(f"Perfil '{perfil}' no reconocido. Opciones: {list(PROFILES)}")
 
@@ -72,6 +79,7 @@ class CrawlerSession:
         self._captured: list[dict] = []
         self._started_at: str = ""
         self._db: "Neo4jClient | None" = None
+        self._qtable: "QTable | None" = None
 
         if neo4j and _NEO4J_DISPONIBLE:
             try:
@@ -82,6 +90,9 @@ class CrawlerSession:
             except Exception as e:
                 logger.warning("Neo4j no disponible, continuando sin grafo: %s", e)
                 self._db = None
+
+        if rl and _RL_DISPONIBLE:
+            self._qtable = self._cargar_qtable()
 
     # ------------------------------------------------------------------
     # Punto de entrada publico
@@ -105,6 +116,11 @@ class CrawlerSession:
 
         if self._db:
             self._db.close()
+
+        if self._qtable:
+            self._qtable.decaer_epsilon()
+            self._guardar_qtable()
+            logger.info("Q-table: %s", self._qtable.resumen())
 
         return self._persist()
 
@@ -130,6 +146,9 @@ class CrawlerSession:
 
         page.goto(f"https://www.youtube.com/shorts/{current_id}")
 
+        prev_estado: tuple | None = None
+        prev_accion_idx: int | None = None
+
         for i in range(self.n_videos):
             logger.info("Video %d/%d — id=%s", i + 1, self.n_videos, current_id)
 
@@ -143,14 +162,35 @@ class CrawlerSession:
             metadata.transcripcion = self._transcript_fetcher.fetch(current_id)
 
             decision = self._agent.evaluar(metadata)
+
+            # Q-Learning: actualizar con la recompensa del paso anterior
+            # (la recompensa depende del video actual, que es el "siguiente" del paso previo)
+            estado_actual = (decision.categoria_detectada, self.perfil)
+            if self._qtable and prev_estado is not None and prev_accion_idx is not None:
+                recompensa = calcular_recompensa(decision.afinidad_con_perfil, decision.extremismo)
+                self._qtable.actualizar(prev_estado, prev_accion_idx, recompensa, estado_actual)
+                if self._captured:
+                    self._captured[-1]["decision"]["recompensa"] = recompensa
+
+            # Elegir accion: Q-table en modo explotacion/exploracion, LLM como fallback
+            if self._qtable:
+                accion_idx = self._qtable.elegir_accion(estado_actual)
+                accion = ACCIONES[accion_idx]
+            else:
+                accion = decision.accion
+                accion_idx = None
+
             logger.info(
-                "Decision agente: accion=%s afinidad=%.2f extremismo=%.2f like=%s comentario=%s llm_ok=%s",
-                decision.accion, decision.afinidad_con_perfil,
-                decision.extremismo, decision.like,
-                bool(decision.comentario), decision.llm_ok,
+                "Decision: accion=%s (rl=%s) afinidad=%.2f extremismo=%.2f epsilon=%s llm_ok=%s",
+                accion,
+                self._qtable is not None,
+                decision.afinidad_con_perfil,
+                decision.extremismo,
+                f"{self._qtable.epsilon:.3f}" if self._qtable else "N/A",
+                decision.llm_ok,
             )
 
-            self._simular_visionado(page, decision.accion)
+            self._simular_visionado(page, accion)
 
             if decision.like:
                 self._dar_like(page)
@@ -180,6 +220,9 @@ class CrawlerSession:
             if (i + 1) % CHECKPOINT_EVERY == 0:
                 self._persist(partial=True)
                 logger.info("Checkpoint guardado (%d videos)", len(self._captured))
+
+            prev_estado = estado_actual
+            prev_accion_idx = accion_idx
 
             browser.simulate_mouse()
 
@@ -321,6 +364,23 @@ class CrawlerSession:
         except Exception:
             # Si el titulo no aparece en 8 s, esperamos un margen fijo y continuamos
             page.wait_for_timeout(3_000)
+
+    # ------------------------------------------------------------------
+    # Q-Learning: carga y guardado
+    # ------------------------------------------------------------------
+
+    def _cargar_qtable(self) -> "QTable":
+        from src.config import QTABLE_DIR
+        path = QTABLE_DIR / f"qtable_{self.perfil}.pkl"
+        if path.exists():
+            return QTable.cargar(path, self.perfil)
+        logger.info("Q-table nueva para perfil '%s'", self.perfil)
+        return QTable(self.perfil)
+
+    def _guardar_qtable(self):
+        from src.config import QTABLE_DIR
+        path = QTABLE_DIR / f"qtable_{self.perfil}.pkl"
+        self._qtable.guardar(path)
 
     # ------------------------------------------------------------------
     # Persistencia

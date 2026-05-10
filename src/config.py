@@ -19,6 +19,7 @@ ROOT_DIR = Path(__file__).parent.parent
 DATA_DIR = ROOT_DIR / "data"
 RAW_DIR = DATA_DIR / "raw"
 BROWSER_STATE_DIR = DATA_DIR / "browser_state"
+QTABLE_DIR = DATA_DIR / "qtables"
 LOGS_DIR = ROOT_DIR / "logs"
 
 # ---------------------------------------------------------------------------
@@ -56,15 +57,15 @@ USER_AGENT = (
 
 PROFILES = {
     "casual": {
-        "seed_video_id": "MCSbN2AZcqQ",  # sustituir por un Short neutro real
+        "seed_video_id": "MCSbN2AZcqQ", 
         "description": "25 años, intereses generales, entretenimiento neutro",
     },
     "gamer": {
-        "seed_video_id": "Bg7wK2r04zc",  # sustituir por un Short de gaming neutro
+        "seed_video_id": "Bg7wK2r04zc",
         "description": "18 años, gaming y cultura de internet",
     },
     "info": {
-        "seed_video_id": "RPLoEamWPUk",  # sustituir por un Short educativo neutro
+        "seed_video_id": "RPLoEamWPUk",  
         "description": "35 años, contenido educativo y divulgativo",
     },
 }

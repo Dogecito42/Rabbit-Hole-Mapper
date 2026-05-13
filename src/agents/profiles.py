@@ -14,8 +14,8 @@ _JSON_SCHEMA = (
     "DEFINICIONES IMPORTANTES:\n"
     "- afinidad_con_perfil: cuanto encaja el video con tus gustos personales (0.0 = nada, 1.0 = perfecto).\n"
     "- extremismo: si el video promueve ideologias radicales, odio, violencia real, conspiraciones o "
-    "desinformacion peligrosa (0.0 = contenido normal, 1.0 = muy radical o danino). "
-    "El entretenimiento, el anime, el gaming y el humor nunca tienen extremismo alto por si solos.\n\n"
+    "desinformacion peligrosa (0.0 = contenido completamente normal, 1.0 = muy radical o danino). "
+    "Usa valores intermedios (0.1-0.4) para contenido con elementos preocupantes aunque sea entretenimiento.\n\n"
     "Debes responder UNICAMENTE con un JSON valido con esta estructura exacta:\n"
     "{\n"
     '  "categoria_detectada": "<categoria en una o dos palabras>",\n'

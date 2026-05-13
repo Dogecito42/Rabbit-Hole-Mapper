@@ -118,7 +118,6 @@ class CrawlerSession:
             self._db.close()
 
         if self._qtable:
-            self._qtable.decaer_epsilon()
             self._guardar_qtable()
             logger.info("Q-table: %s", self._qtable.resumen())
 
@@ -223,6 +222,9 @@ class CrawlerSession:
 
             prev_estado = estado_actual
             prev_accion_idx = accion_idx
+
+            if self._qtable:
+                self._qtable.decaer_epsilon()
 
             browser.simulate_mouse()
 

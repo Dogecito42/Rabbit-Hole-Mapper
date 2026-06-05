@@ -121,7 +121,6 @@ delay = random.uniform(2, 8)  # segundos entre acciones
 - Python 3.11+
 - [Ollama](https://ollama.com) con modelo `llama3.1:8b`
 - [Neo4j Community Edition](https://neo4j.com/download/) (o Docker)
-- NVIDIA GPU recomendada (RTX 3070 o superior para Llama 3.1 8B)
 
 ### Setup
 

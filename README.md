@@ -35,7 +35,7 @@ mediante agentes autónomos LLM y bases de datos de grafos
 
 Los agentes aprenden mediante **Q-Learning** qué acciones maximizan su exposición a contenido afín, y toda la estructura de recomendaciones se almacena y analiza como un **grafo dirigido en Neo4j**.
 
-El sistema corre **completamente en local** sobre una GPU NVIDIA RTX 3070 — sin coste de infraestructura, sin APIs externas, sin datos enviados a terceros.
+El sistema corre **completamente en local** sobre una GPU NVIDIA RTX 3070 — sin coste de infraestructura, sin datos enviados a terceros.
 
 
 ## Características principales

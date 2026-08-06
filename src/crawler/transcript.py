@@ -10,11 +10,12 @@ para que el modelo entienda el contenido del video mas alla del titulo.
 """
 
 import logging
+
 from youtube_transcript_api import (
-    YouTubeTranscriptApi,
     NoTranscriptFound,
     TranscriptsDisabled,
     VideoUnavailable,
+    YouTubeTranscriptApi,
 )
 
 logger = logging.getLogger(__name__)

@@ -10,7 +10,6 @@ que manejar respuestas malformadas.
 
 import json
 import logging
-from typing import Optional
 
 import ollama
 
@@ -39,7 +38,7 @@ class LLMClient:
         self.model = model
         self._client = ollama.Client(host=host)
 
-    def evaluar_video(self, system_prompt: str, video_texto: str) -> Optional[dict]:
+    def evaluar_video(self, system_prompt: str, video_texto: str) -> dict | None:
         """
         Llama al LLM con el system prompt del perfil y la descripcion del video.
 
@@ -61,7 +60,7 @@ class LLMClient:
             logger.error("Error llamando a Ollama: %s", e)
             return None
 
-    def _parsear_json(self, texto: str) -> Optional[dict]:
+    def _parsear_json(self, texto: str) -> dict | None:
         """
         Extrae y valida el JSON de la respuesta del LLM.
 

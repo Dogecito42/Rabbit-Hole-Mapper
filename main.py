@@ -29,6 +29,8 @@ from pathlib import Path
 from src.config import DEFAULT_VIDEOS, LOGS_DIR
 from src.crawler.session import CrawlerSession
 
+logger = logging.getLogger(__name__)
+
 
 def _setup_logging(perfil: str):
     """
@@ -49,7 +51,7 @@ def _setup_logging(perfil: str):
             logging.FileHandler(log_file, encoding="utf-8"),
         ],
     )
-    logging.info("Log de sesion: %s", log_file)
+    logger.info("Log de sesion: %s", log_file)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -82,7 +84,7 @@ def main():
     args = _parse_args()
     _setup_logging(args.perfil)
 
-    logging.info(
+    logger.info(
         "RabbitHole Mapper | perfil=%s | videos=%d | headless=%s",
         args.perfil, args.videos, args.headless,
     )
@@ -94,7 +96,7 @@ def main():
     )
 
     output_path: Path = session.run()
-    logging.info("Sesion completada. Datos en: %s", output_path)
+    logger.info("Sesion completada. Datos en: %s", output_path)
 
 
 if __name__ == "__main__":

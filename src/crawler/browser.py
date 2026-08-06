@@ -16,17 +16,17 @@ Flujo de primera ejecucion por perfil:
     5. Las siguientes ejecuciones cargan ese estado y corren en modo headless
 """
 
+import logging
 import os
 import random
 import time
-import logging
-from pathlib import Path
-from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
+
+from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from src.config import (
     BROWSER_STATE_DIR,
-    DELAY_MIN,
     DELAY_MAX,
+    DELAY_MIN,
     USER_AGENT,
 )
 

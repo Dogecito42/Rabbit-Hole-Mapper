@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.per-file-ignores]
+"*" = [
+    "BLE001",  # catch Exception es intencional: acciones best-effort de scraping/LLM que no deben tumbar la sesion
+    "S110",    # try/except/pass acompaña siempre a un log.debug best-effort en el crawler
+    "DTZ005",  # timestamps locales de logs/ficheros, no hay coordinacion multi-zona horaria
+    "PYI034",  # __enter__ tipado con el nombre de la clase por legibilidad, no una stub lib
+]

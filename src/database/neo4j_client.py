@@ -16,9 +16,10 @@ Schema del grafo:
 """
 
 import logging
+
 from neo4j import GraphDatabase
 
-from src.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from src.config import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
 
 logger = logging.getLogger(__name__)
 

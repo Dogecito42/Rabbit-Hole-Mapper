@@ -8,13 +8,13 @@ Uso:
 
 import argparse
 import sys
+
 sys.stdout.reconfigure(encoding="utf-8")
 
 from src.database.neo4j_client import Neo4jClient
 from src.database.queries import (
     stats_grafo,
     videos_mas_recomendados,
-    extremismo_perfil,
 )
 
 PERFILES = ["casual", "gamer", "info"]

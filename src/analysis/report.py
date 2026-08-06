@@ -10,12 +10,13 @@ Uso:
 
 import json
 import sys
+
 sys.stdout.reconfigure(encoding="utf-8")
 from datetime import datetime
 from pathlib import Path
 
+from src.analysis import betweenness, louvain, pagerank, shortest_path
 from src.database.neo4j_client import Neo4jClient
-from src.analysis import pagerank, louvain, betweenness, shortest_path
 
 RESULTS_DIR = Path("results")
 

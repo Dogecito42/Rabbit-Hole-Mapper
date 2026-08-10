@@ -9,11 +9,10 @@ en lugar de dicts crudos para que el bucle principal tenga tipos claros.
 import logging
 import re
 from dataclasses import dataclass
-from typing import Optional
 
-from src.crawler.extractor import VideoMetadata
-from src.agents.profiles import PERFILES, ACCIONES_VALIDAS
 from src.agents.llm_client import LLMClient
+from src.agents.profiles import ACCIONES_VALIDAS, PERFILES
+from src.crawler.extractor import VideoMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class Decision:
     extremismo: float
     accion: str
     like: bool
-    comentario: Optional[str]
+    comentario: str | None
     razonamiento: str
     llm_ok: bool
 
@@ -83,7 +82,7 @@ class Agent:
     reutiliza entre llamadas para no reabrir la conexion con Ollama en cada video.
     """
 
-    def __init__(self, perfil: str, llm_client: Optional[LLMClient] = None):
+    def __init__(self, perfil: str, llm_client: LLMClient | None = None):
         if perfil not in PERFILES:
             raise ValueError(f"Perfil desconocido: '{perfil}'. Validos: {list(PERFILES)}")
         self.perfil = perfil

@@ -7,6 +7,7 @@ Carga valores desde .env cuando estan disponibles.
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,11 +29,11 @@ LOGS_DIR = ROOT_DIR / "logs"
 
 # Delay en segundos entre acciones para simular comportamiento humano.
 # Se elige un valor aleatorio dentro de este rango en cada accion.
-DELAY_MIN = float(os.getenv("CRAWLER_DELAY_MIN", 2))
-DELAY_MAX = float(os.getenv("CRAWLER_DELAY_MAX", 8))
+DELAY_MIN = float(os.getenv("CRAWLER_DELAY_MIN", "2"))
+DELAY_MAX = float(os.getenv("CRAWLER_DELAY_MAX", "8"))
 
 # Numero de videos a capturar por sesion si no se especifica en CLI.
-DEFAULT_VIDEOS = int(os.getenv("CRAWLER_DEFAULT_VIDEOS", 50))
+DEFAULT_VIDEOS = int(os.getenv("CRAWLER_DEFAULT_VIDEOS", "50"))
 
 # Cada cuantos videos se guarda un checkpoint incremental en disco.
 CHECKPOINT_EVERY = 10

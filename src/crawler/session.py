@@ -21,21 +21,21 @@ import random
 import re
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import parse_qs, unquote, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 _RE_SHORTS_ID = re.compile(r"/shorts/([A-Za-z0-9_-]+)")
 
+from src.agents.agent import Agent
 from src.config import (
-    RAW_DIR,
     CHECKPOINT_EVERY,
     PROFILES,
+    RAW_DIR,
 )
 from src.crawler.browser import BrowserSession
 from src.crawler.extractor import VideoExtractor, VideoMetadata
 from src.crawler.transcript import TranscriptFetcher
-from src.agents.agent import Agent
 
 try:
     from src.database.neo4j_client import Neo4jClient
@@ -44,7 +44,7 @@ except ImportError:
     _NEO4J_DISPONIBLE = False
 
 try:
-    from src.rl.qtable import QTable, ACCIONES
+    from src.rl.qtable import ACCIONES, QTable
     from src.rl.reward import calcular_recompensa
     _RL_DISPONIBLE = True
 except ImportError:
@@ -79,8 +79,8 @@ class CrawlerSession:
         self._agent = Agent(perfil)
         self._captured: list[dict] = []
         self._started_at: str = ""
-        self._db: "Neo4jClient | None" = None
-        self._qtable: "QTable | None" = None
+        self._db: Neo4jClient | None = None
+        self._qtable: QTable | None = None
 
         if neo4j and _NEO4J_DISPONIBLE:
             try:

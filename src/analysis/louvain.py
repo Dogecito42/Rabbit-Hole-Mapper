@@ -12,6 +12,7 @@ Uso:
 
 import argparse
 import sys
+
 sys.stdout.reconfigure(encoding="utf-8")
 from collections import Counter, defaultdict
 

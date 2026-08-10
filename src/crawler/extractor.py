@@ -16,11 +16,10 @@ Notas sobre fragilidad:
     youtube.com/shorts es el punto de partida para actualizarlos.
 """
 
-import re
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from playwright.sync_api import Page
 
@@ -60,10 +59,10 @@ class VideoMetadata:
     """
 
     video_id: str
-    titulo: Optional[str]
+    titulo: str | None
     hashtags: list[str]
     transcripcion: str                # cadena vacia si no hay transcripcion
-    next_video_id: Optional[str]
+    next_video_id: str | None
     capturado_en: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_dict(self) -> dict:
@@ -144,7 +143,7 @@ class VideoExtractor:
         except Exception:
             pass
 
-    def _extract_titulo(self) -> Optional[str]:
+    def _extract_titulo(self) -> str | None:
         """Lee el titulo del video probando varios selectores en orden."""
         try:
             for selector in _SEL_TITLE_CANDIDATES:
@@ -170,7 +169,7 @@ class VideoExtractor:
             logger.debug("No se pudieron extraer hashtags: %s", e)
         return []
 
-    def _extract_next_video_id(self, current_id: str) -> Optional[str]:
+    def _extract_next_video_id(self, current_id: str) -> str | None:
         """
         Encuentra el ID del siguiente Short recomendado en el DOM.
 

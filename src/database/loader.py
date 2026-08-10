@@ -9,8 +9,6 @@ Uso:
 import argparse
 import json
 import logging
-import sys
-from pathlib import Path
 
 from src.config import RAW_DIR
 from src.database.neo4j_client import Neo4jClient

@@ -13,6 +13,7 @@ Uso:
 
 import argparse
 import sys
+
 sys.stdout.reconfigure(encoding="utf-8")
 
 from src.database.neo4j_client import Neo4jClient

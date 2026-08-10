@@ -16,6 +16,7 @@ Uso:
 
 import argparse
 import sys
+
 sys.stdout.reconfigure(encoding="utf-8")
 
 from src.database.neo4j_client import Neo4jClient
@@ -138,7 +139,7 @@ def main():
         origen = (r["origen_titulo"] or r["origen_video_id"] or "?")[:25]
         destino = (r["destino_titulo"] or r["destino_video_id"] or "?")[:25]
         saltos = r["saltos"] if r["saltos"] is not None else "sin camino"
-        print(f"{r['perfil']:<10} {str(saltos):<8} {origen} → {destino}")
+        print(f"{r['perfil']:<10} {saltos!s:<8} {origen} → {destino}")
 
     return resultados
 
